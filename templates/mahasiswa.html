@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Data Mahasiswa</h1>
+    {% if session.role == 'admin' %}
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('tambah_mahasiswa') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Tambah Mahasiswa
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-list"></i> Daftar Mahasiswa
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>NIM</th>
+                        <th>Nama</th>
+                        <th>Jurusan</th>
+                        <th>Status Wajah</th>
+                        <th>Tanggal Daftar</th>
+                        {% if session.role == 'admin' %}
+                        <th>Aksi</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mahasiswa_list %}
+                    <tr>
+                        <td>{{ m.nim }}</td>
+                        <td>{{ m.nama }}</td>
+                        <td>{{ m.jurusan }}</td>
+                        <td>
+                            {% if m.has_face %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Teregistrasi
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-times"></i> Belum Daftar
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ m.created_at.strftime('%d-%m-%Y') }}</td>
+                        {% if session.role == 'admin' %}
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary capture-face" 
+                                        data-id="{{ m.id }}" 
+                                        data-nama="{{ m.nama }}"
+                                        {% if m.has_face %}disabled{% endif %}>
+                                    <i class="fas fa-camera"></i> Daftar Wajah
+                                </button>
+                                <a href="{{ url_for('hapus_mahasiswa', id=m.id) }}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('Hapus mahasiswa {{ m.nama }}?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not mahasiswa_list %}
+        <div class="text-center py-4">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Belum ada data mahasiswa</p>
+            {% if session.role == 'admin' %}
+            <a href="{{ url_for('tambah_mahasiswa') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Tambah Mahasiswa Pertama
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal untuk proses pengambilan wajah -->
+<div class="modal fade" id="faceCaptureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Daftarkan Wajah</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="capture-status">
+                    <p>Mempersiapkan kamera...</p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: 0%"></div>
+                    </div>
+                    <p class="text-muted small">
+                        Pastikan pencahayaan cukup dan wajah terlihat jelas di kamera.
+                        Sistem akan mengambil 5 sampel foto.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_mahasiswa }}</h4>
+                        <p>Total Mahasiswa</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_presensi }}</h4>
+                        <p>Presensi Hari Ini</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-camera fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ mahasiswa_dengan_wajah }}</h4>
+                        <p>Wajah Teregistrasi</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-id-card fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Presensi Terbaru</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>NIM</th>
+                                <th>Nama</th>
+                                <th>Waktu</th>
+                                <th>Tipe</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for presensi in recent_presensi %}
+                            <tr>
+                                <td>{{ presensi.nim }}</td>
+                                <td>{{ presensi.nama }}</td>
+                                <td>{{ presensi.waktu.strftime('%H:%M:%S') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if presensi.tipe == 'masuk' else 'danger' }}">
+                                        {{ presensi.tipe }}
+                                    </span>
+                                </td>
+                                <td>{{ "%.2f"|format(presensi.confidence) if presensi.confidence else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

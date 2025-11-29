@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Laporan Presensi</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('export_excel') }}?tanggal={{ tanggal }}" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+            <a href="{{ url_for('export_pdf') }}?tanggal={{ tanggal }}" class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-filter"></i> Filter Laporan
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('laporan') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="tanggal" class="form-label">Tanggal</label>
+                <input type="date" class="form-control" id="tanggal" name="tanggal" 
+                       value="{{ tanggal }}" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Tampilkan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-list"></i> Data Presensi - {{ tanggal }}
+        </h5>
+        <span class="badge bg-primary">{{ presensi_data|length }} Records</span>
+    </div>
+    <div class="card-body">
+        {% if presensi_data %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>NIM</th>
+                        <th>Nama</th>
+                        <th>Jurusan</th>
+                        <th>Waktu</th>
+                        <th>Tipe</th>
+                        <th>Confidence</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in presensi_data %}
+                    <tr>
+                        <td>{{ p.nim }}</td>
+                        <td>{{ p.nama }}</td>
+                        <td>{{ p.jurusan }}</td>
+                        <td>{{ p.waktu.strftime('%H:%M:%S') }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if p.tipe == 'masuk' else 'danger' }}">
+                                {{ p.tipe }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if p.confidence %}
+                                <span class="badge bg-{{ 'success' if p.confidence > 0.8 else 'warning' }}">
+                                    {{ "%.2f"|format(p.confidence) }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.confidence and p.confidence > 0.7 %}
+                                <span class="badge bg-success">Tinggi</span>
+                            {% elif p.confidence and p.confidence > 0.5 %}
+                                <span class="badge bg-warning">Sedang</span>
+                            {% elif p.confidence %}
+                                <span class="badge bg-danger">Rendah</span>
+                            {% else %}
+                                <span class="badge bg-secondary">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Tidak ada data presensi</h5>
+            <p class="text-muted">Tidak ada record presensi untuk tanggal {{ tanggal }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Summary Cards -->
+{% if presensi_data %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ presensi_data|length }}</h4>
+                        <p>Total Presensi</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ presensi_data|selectattr('tipe', 'equalto', 'masuk')|list|length }}</h4>
+                        <p>Presensi Masuk</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-sign-in-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ presensi_data|selectattr('tipe', 'equalto', 'keluar')|list|length }}</h4>
+                        <p>Presensi Keluar</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-sign-out-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ (presensi_data|map(attribute='confidence')|select|list|length) }}</h4>
+                        <p>Dengan Confidence</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

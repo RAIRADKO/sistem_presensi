@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Daftarkan Wajah Mahasiswa</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('mahasiswa') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-camera"></i> Proses Pendaftaran Wajah
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <h4>{{ mahasiswa.nama }}</h4>
+                    <p class="text-muted">NIM: {{ mahasiswa.nim }} | Jurusan: {{ mahasiswa.jurusan }}</p>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Petunjuk Pengambilan Wajah</h6>
+                    <ul class="text-start mb-0">
+                        <li>Pastikan pencahayaan ruangan cukup</li>
+                        <li>Hadap langsung ke kamera</li>
+                        <li>Jangan menggunakan topi atau kacamata hitam</li>
+                        <li>Ekspresi wajah netral</li>
+                        <li>Jaga jarak optimal 50-100 cm dari kamera</li>
+                    </ul>
+                </div>
+                
+                <div id="capture-progress" class="mb-4" style="display: none;">
+                    <h5>Proses Pengambilan Wajah</h5>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="progress-bar" style="width: 0%">0%</div>
+                    </div>
+                    <p id="progress-text">Mempersiapkan kamera...</p>
+                </div>
+                
+                <div id="capture-result" style="display: none;">
+                    <div class="alert alert-success">
+                        <h4><i class="fas fa-check-circle"></i> Berhasil!</h4>
+                        <p class="mb-0">Wajah berhasil didaftarkan ke sistem.</p>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 col-6 mx-auto">
+                    <button type="button" class="btn btn-primary btn-lg" id="start-capture">
+                        <i class="fas fa-camera"></i> Mulai Pengambilan Wajah
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('start-capture').addEventListener('click', function() {
+    const btn = this;
+    const progressDiv = document.getElementById('capture-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    
+    btn.disabled = true;
+    progressDiv.style.display = 'block';
+    
+    // Simulate progress updates
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 5;
+        progressBar.style.width = progress + '%';
+        progressBar.textContent = progress + '%';
+        
+        if (progress <= 20) {
+            progressText.textContent = 'Mengaktifkan kamera...';
+        } else if (progress <= 40) {
+            progressText.textContent = 'Mendeteksi wajah...';
+        } else if (progress <= 60) {
+            progressText.textContent = 'Mengambil sampel 1...';
+        } else if (progress <= 80) {
+            progressText.textContent = 'Mengambil sampel 2...';
+        } else {
+            progressText.textContent = 'Menyimpan data wajah...';
+        }
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            
+            // Send request to capture face
+            fetch(`/api/capture-face/{{ mahasiswa.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('capture-result').style.display = 'block';
+                    progressText.textContent = 'Proses selesai!';
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('mahasiswa') }}";
+                    }, 2000);
+                } else {
+                    progressText.innerHTML = `<span class="text-danger">Error: ${data.message}</span>`;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                progressText.innerHTML = '<span class="text-danger">Terjadi kesalahan!</span>';
+                btn.disabled = false;
+            });
+        }
+    }, 200);
+});
+</script>
+{% endblock %}

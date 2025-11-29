@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Sistem Presensi</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-success" id="start-presensi">
+            <i class="fas fa-play"></i> Mulai Presensi
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-camera"></i> Kamera Presensi
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div id="video-container" style="display: none;">
+                    <img id="video-feed" src="" alt="Video Feed" class="img-fluid rounded">
+                    <div id="attendance-status" class="attendance-status"></div>
+                </div>
+                
+                <div id="presensi-instruction">
+                    <div class="py-5">
+                        <i class="fas fa-camera fa-5x text-muted mb-4"></i>
+                        <h3>Klik "Mulai Presensi" untuk memulai</h3>
+                        <p class="text-muted">
+                            Sistem akan membuka jendela kamera untuk mendeteksi wajah dan mencatat presensi.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <h6><i class="fas fa-info-circle"></i> Cara Penggunaan:</h6>
+                    <ul class="text-start mb-0">
+                        <li>Klik tombol "Mulai Presensi"</li>
+                        <li>Izinkan akses kamera ketika diminta</li>
+                        <li>Hadap kamera dengan posisi wajah jelas</li>
+                        <li>Tunggu sistem mendeteksi dan mengenali wajah</li>
+                        <li>Tekan tombol 's' untuk menyimpan presensi</li>
+                        <li>Tekan tombol 'q' untuk keluar</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line"></i> Statistik Hari Ini
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 id="total-masuk">0</h4>
+                            <small class="text-muted">Masuk</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 id="total-keluar">0</h4>
+                            <small class="text-muted">Keluar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history"></i> Presensi Terbaru
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="recent-attendance">
+                    <p class="text-muted text-center">Belum ada presensi hari ini</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal untuk hasil presensi -->
+<div class="modal fade" id="attendanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hasil Presensi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h4 id="modal-nama"></h4>
+                <p id="modal-nim" class="text-muted"></p>
+                <p id="modal-status" class="fw-bold"></p>
+                <p id="modal-confidence" class="small"></p>
+                <p class="text-muted small">Presensi berhasil dicatat</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Function to update statistics
+function updateStatistics() {
+    fetch('/api/statistics')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-masuk').textContent = data.masuk;
+            document.getElementById('total-keluar').textContent = data.keluar;
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Function to update recent attendance
+function updateRecentAttendance() {
+    fetch('/api/recent-attendance')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('recent-attendance');
+            if (data.length > 0) {
+                let html = '';
+                data.forEach(item => {
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                            <div>
+                                <strong>${item.nama}</strong><br>
+                                <small class="text-muted">${item.nim}</small>
+                            </div>
+                            <span class="badge bg-${item.tipe === 'masuk' ? 'success' : 'danger'}">
+                                ${item.tipe}
+                            </span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Update statistics on page load
+updateStatistics();
+updateRecentAttendance();
+
+// Update every 30 seconds
+setInterval(() => {
+    updateStatistics();
+    updateRecentAttendance();
+}, 30000);
+</script>
+{% endblock %}
