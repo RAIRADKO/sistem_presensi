@@ -1,19 +1,6 @@
 // JavaScript untuk interaksi dengan sistem presensi
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Tombol daftar wajah
-    const captureButtons = document.querySelectorAll('.capture-face');
-    captureButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const mahasiswaId = this.dataset.id;
-            const mahasiswaNama = this.dataset.nama;
-            
-            if (confirm(`Mulai proses pengambilan wajah untuk ${mahasiswaNama}?`)) {
-                captureFace(mahasiswaId);
-            }
-        });
-    });
-
     // Tombol start presensi
     const startPresensiBtn = document.getElementById('start-presensi');
     if (startPresensiBtn) {
@@ -21,29 +8,16 @@ document.addEventListener('DOMContentLoaded', function() {
             startPresensi();
         });
     }
-});
-
-function captureFace(mahasiswaId) {
-    fetch(`/api/capture-face/${mahasiswaId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Wajah berhasil didaftarkan!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat mendaftarkan wajah');
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
     });
-}
+});
 
 function startPresensi() {
     // Buka window baru untuk presensi
@@ -53,4 +27,23 @@ function startPresensi() {
     if (!presensiWindow) {
         alert('Popup diblokir! Izinkan popup untuk sistem presensi.');
     }
+}
+
+// Utility function untuk format tanggal
+function formatDate(date) {
+    const options = { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    return new Date(date).toLocaleDateString('id-ID', options);
+}
+
+// Utility function untuk format confidence score
+function formatConfidence(score) {
+    if (!score) return '-';
+    const percentage = (score * 100).toFixed(2);
+    return percentage + '%';
 }

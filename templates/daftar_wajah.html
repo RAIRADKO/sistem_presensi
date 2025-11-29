@@ -4,126 +4,309 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Daftarkan Wajah Mahasiswa</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('mahasiswa') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Kembali
+        <a href="{{ url_for('cancel_capture', id=mahasiswa.id) }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Batal
         </a>
     </div>
 </div>
 
-<div class="row justify-content-center">
+<div class="row">
+    <!-- Kamera Section -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-camera"></i> Proses Pendaftaran Wajah
+                    <i class="fas fa-camera"></i> Kamera Pengambilan Wajah
                 </h5>
             </div>
-            <div class="card-body text-center">
-                <div class="mb-4">
-                    <h4>{{ mahasiswa.nama }}</h4>
-                    <p class="text-muted">NIM: {{ mahasiswa.nim }} | Jurusan: {{ mahasiswa.jurusan }}</p>
+            <div class="card-body">
+                <div class="text-center">
+                    <img src="{{ url_for('video_feed') }}" 
+                         id="video-feed" 
+                         class="img-fluid rounded border border-primary"
+                         style="max-width: 100%; height: auto;">
                 </div>
                 
-                <div class="alert alert-warning">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Petunjuk Pengambilan Wajah</h6>
-                    <ul class="text-start mb-0">
-                        <li>Pastikan pencahayaan ruangan cukup</li>
-                        <li>Hadap langsung ke kamera</li>
-                        <li>Jangan menggunakan topi atau kacamata hitam</li>
-                        <li>Ekspresi wajah netral</li>
-                        <li>Jaga jarak optimal 50-100 cm dari kamera</li>
-                    </ul>
-                </div>
-                
-                <div id="capture-progress" class="mb-4" style="display: none;">
-                    <h5>Proses Pengambilan Wajah</h5>
-                    <div class="progress mb-3" style="height: 25px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             id="progress-bar" style="width: 0%">0%</div>
+                <div class="mt-4">
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div class="progress-bar bg-success progress-bar-striped" 
+                             id="sample-progress" 
+                             role="progressbar" 
+                             style="width: 0%"
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="5">
+                            <strong id="progress-text">0/5 Sampel</strong>
+                        </div>
                     </div>
-                    <p id="progress-text">Mempersiapkan kamera...</p>
-                </div>
-                
-                <div id="capture-result" style="display: none;">
-                    <div class="alert alert-success">
-                        <h4><i class="fas fa-check-circle"></i> Berhasil!</h4>
-                        <p class="mb-0">Wajah berhasil didaftarkan ke sistem.</p>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button type="button" class="btn btn-success btn-lg" id="btn-capture">
+                            <i class="fas fa-camera"></i> Ambil Sampel Wajah
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg" id="btn-save" disabled>
+                            <i class="fas fa-save"></i> Simpan Wajah
+                        </button>
                     </div>
                 </div>
-                
-                <div class="d-grid gap-2 col-6 mx-auto">
-                    <button type="button" class="btn btn-primary btn-lg" id="start-capture">
-                        <i class="fas fa-camera"></i> Mulai Pengambilan Wajah
-                    </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info Section -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user"></i> Data Mahasiswa
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>NIM</th>
+                        <td>{{ mahasiswa.nim }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nama</th>
+                        <td>{{ mahasiswa.nama }}</td>
+                    </tr>
+                    <tr>
+                        <th>Jurusan</th>
+                        <td>{{ mahasiswa.jurusan }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Petunjuk
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li>Pastikan pencahayaan ruangan cukup</li>
+                    <li>Hadap langsung ke kamera</li>
+                    <li>Jangan gunakan topi/kacamata hitam</li>
+                    <li>Jaga jarak 50-100 cm dari kamera</li>
+                    <li>Klik "Ambil Sampel Wajah" sebanyak 5x</li>
+                    <li>Setelah 5 sampel, klik "Simpan Wajah"</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-check-circle"></i> Status Sampel
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="samples-status">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Sampel 1</span>
+                        <span class="badge bg-secondary" id="status-1">Belum</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Sampel 2</span>
+                        <span class="badge bg-secondary" id="status-2">Belum</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Sampel 3</span>
+                        <span class="badge bg-secondary" id="status-3">Belum</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Sampel 4</span>
+                        <span class="badge bg-secondary" id="status-4">Belum</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Sampel 5</span>
+                        <span class="badge bg-secondary" id="status-5">Belum</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Berhasil!
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h4>Wajah Berhasil Didaftarkan!</h4>
+                <p class="text-muted">Data wajah {{ mahasiswa.nama }} telah tersimpan di sistem.</p>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('mahasiswa') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Daftar Mahasiswa
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-circle"></i> Error
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="error-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-document.getElementById('start-capture').addEventListener('click', function() {
+let samplesCount = 0;
+const maxSamples = 5;
+
+// Capture sample button
+document.getElementById('btn-capture').addEventListener('click', function() {
     const btn = this;
-    const progressDiv = document.getElementById('capture-progress');
-    const progressBar = document.getElementById('progress-bar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil...';
+    
+    fetch('/api/capture-sample', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Capture response:', data);
+        
+        if (data.success) {
+            samplesCount = data.samples_count;
+            updateProgress(samplesCount);
+            
+            // Update status badge
+            document.getElementById(`status-${samplesCount}`).textContent = 'Selesai';
+            document.getElementById(`status-${samplesCount}`).className = 'badge bg-success';
+            
+            // Play success sound (optional)
+            console.log(`✓ Sampel ${samplesCount}/5 berhasil!`);
+            
+            // Enable save button when 5 samples collected
+            if (samplesCount >= maxSamples) {
+                document.getElementById('btn-save').disabled = false;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-check"></i> Selesai';
+                
+                // Show notification
+                alert('✓ 5 sampel berhasil diambil! Silakan klik "Simpan Wajah"');
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-camera"></i> Ambil Sampel Wajah';
+            }
+        } else {
+            console.error('Capture failed:', data.message);
+            showError(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-camera"></i> Ambil Sampel Wajah';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Terjadi kesalahan saat mengambil sampel: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-camera"></i> Ambil Sampel Wajah';
+    });
+});
+
+// Save face button
+document.getElementById('btn-save').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    
+    fetch('/api/save-face/{{ mahasiswa.id }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success modal
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+        } else {
+            showError(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Simpan Wajah';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Terjadi kesalahan saat menyimpan wajah');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan Wajah';
+    });
+});
+
+function updateProgress(count) {
+    const percentage = (count / maxSamples) * 100;
+    const progressBar = document.getElementById('sample-progress');
     const progressText = document.getElementById('progress-text');
     
-    btn.disabled = true;
-    progressDiv.style.display = 'block';
-    
-    // Simulate progress updates
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += 5;
-        progressBar.style.width = progress + '%';
-        progressBar.textContent = progress + '%';
-        
-        if (progress <= 20) {
-            progressText.textContent = 'Mengaktifkan kamera...';
-        } else if (progress <= 40) {
-            progressText.textContent = 'Mendeteksi wajah...';
-        } else if (progress <= 60) {
-            progressText.textContent = 'Mengambil sampel 1...';
-        } else if (progress <= 80) {
-            progressText.textContent = 'Mengambil sampel 2...';
-        } else {
-            progressText.textContent = 'Menyimpan data wajah...';
-        }
-        
-        if (progress >= 100) {
-            clearInterval(interval);
-            
-            // Send request to capture face
-            fetch(`/api/capture-face/{{ mahasiswa.id }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('capture-result').style.display = 'block';
-                    progressText.textContent = 'Proses selesai!';
-                    
-                    // Redirect after 2 seconds
-                    setTimeout(() => {
-                        window.location.href = "{{ url_for('mahasiswa') }}";
-                    }, 2000);
-                } else {
-                    progressText.innerHTML = `<span class="text-danger">Error: ${data.message}</span>`;
-                    btn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                progressText.innerHTML = '<span class="text-danger">Terjadi kesalahan!</span>';
-                btn.disabled = false;
-            });
-        }
-    }, 200);
+    progressBar.style.width = percentage + '%';
+    progressBar.setAttribute('aria-valuenow', count);
+    progressText.textContent = `${count}/${maxSamples} Sampel`;
+}
+
+function showError(message) {
+    document.getElementById('error-message').textContent = message;
+    const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+    modal.show();
+}
+
+// Warn user before leaving page
+window.addEventListener('beforeunload', function (e) {
+    if (samplesCount > 0 && samplesCount < maxSamples) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
 });
 </script>
+
+<style>
+#video-feed {
+    width: 100%;
+    max-width: 640px;
+    border: 3px solid #0d6efd;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.progress {
+    font-size: 1rem;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#samples-status {
+    font-size: 0.95rem;
+}
+</style>
 {% endblock %}

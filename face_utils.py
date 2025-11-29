@@ -44,30 +44,36 @@ class FaceRecognition:
         except Exception as e:
             print(f"Error loading face encodings from database: {e}")
 
-    def validate_image_format(self, image):
-        """Validasi dan memperbaiki format gambar untuk face_recognition"""
+    def preprocess_frame(self, frame):
+        """Preprocess frame untuk memastikan format yang benar"""
         try:
-            # Pastikan image adalah numpy array
-            if not isinstance(image, np.ndarray):
-                raise ValueError("Image is not a numpy array")
+            # Pastikan frame adalah numpy array
+            if not isinstance(frame, np.ndarray):
+                raise ValueError("Frame must be a numpy array")
             
-            # Pastikan tipe data adalah uint8
-            if image.dtype != np.uint8:
-                image = image.astype(np.uint8)
+            # Cek dimensi frame
+            if len(frame.shape) == 2:  # Grayscale
+                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            elif len(frame.shape) == 3:
+                if frame.shape[2] == 4:  # BGRA
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                elif frame.shape[2] != 3:  # Bukan BGR
+                    raise ValueError(f"Unsupported number of channels: {frame.shape[2]}")
+            else:
+                raise ValueError(f"Unsupported frame shape: {frame.shape}")
             
-            # Pastikan gambar memiliki 3 channel (RGB)
-            if len(image.shape) == 2:  # Grayscale
-                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-            elif image.shape[2] == 4:  # RGBA
-                image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
-            elif image.shape[2] == 3:  # RGB atau BGR
-                # Pastikan format RGB
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # Pastikan tipe data uint8
+            if frame.dtype != np.uint8:
+                frame = frame.astype(np.uint8)
             
-            return image
+            # Pastikan contiguous array
+            frame = np.ascontiguousarray(frame)
+            
+            return frame
+            
         except Exception as e:
-            print(f"Error validating image format: {e}")
-            return None
+            print(f"Error in preprocess_frame: {e}")
+            raise
 
     def capture_face_encoding(self, num_samples=5) -> Optional[List[float]]:
         """Mengambil sampel wajah dan menghasilkan encoding rata-rata"""
@@ -76,15 +82,15 @@ class FaceRecognition:
             print("Error: Cannot open camera")
             return None
         
-        # Set resolusi kamera untuk konsistensi
+        # Set camera properties
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv2.CAP_PROP_FPS, 30)
         
         encodings = []
         samples_taken = 0
         
         print("Starting face capture... Press 'q' to quit, 'c' to capture")
-        print("Pastikan wajah terlihat jelas dengan pencahayaan yang baik")
         
         while samples_taken < num_samples:
             ret, frame = cap.read()
@@ -92,18 +98,19 @@ class FaceRecognition:
                 print("Error: Cannot read frame")
                 break
             
-            # Validasi dan perbaiki format gambar
-            validated_frame = self.validate_image_format(frame)
-            if validated_frame is None:
-                print("Error: Invalid image format")
-                continue
-            
             try:
-                # Find faces in the validated frame
-                face_locations = face_recognition.face_locations(validated_frame)
-                face_encodings = face_recognition.face_encodings(validated_frame, face_locations)
+                # Preprocess frame
+                frame = self.preprocess_frame(frame)
                 
-                # Draw rectangles around faces on original frame for display
+                # Convert BGR to RGB
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                rgb_frame = np.ascontiguousarray(rgb_frame)
+                
+                # Find faces
+                face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+                face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                
+                # Draw rectangles around faces
                 for (top, right, bottom, left) in face_locations:
                     cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
                 
@@ -113,13 +120,6 @@ class FaceRecognition:
                 cv2.putText(frame, "Press 'c' to capture, 'q' to quit", 
                            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 
-                if len(face_locations) > 0:
-                    cv2.putText(frame, "Wajah terdeteksi!", 
-                               (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                else:
-                    cv2.putText(frame, "Tidak ada wajah terdeteksi", 
-                               (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                
                 cv2.imshow('Face Enrollment', frame)
                 
                 key = cv2.waitKey(1) & 0xFF
@@ -128,17 +128,14 @@ class FaceRecognition:
                 elif key == ord('c') and len(face_encodings) > 0:
                     encodings.append(face_encodings[0])
                     samples_taken += 1
-                    print(f"Sample {samples_taken} captured successfully")
-                elif key == ord('c') and len(face_encodings) == 0:
-                    print("Tidak ada wajah yang terdeteksi untuk di-capture!")
+                    print(f"Sample {samples_taken} captured")
                     
             except Exception as e:
-                print(f"Error in face detection: {e}")
-                # Tampilkan frame meski ada error
+                print(f"Error processing frame: {e}")
+                cv2.putText(frame, f"Error: {str(e)[:30]}", 
+                           (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 cv2.imshow('Face Enrollment', frame)
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
+                cv2.waitKey(1)
         
         cap.release()
         cv2.destroyAllWindows()
@@ -146,10 +143,7 @@ class FaceRecognition:
         if len(encodings) > 0:
             # Calculate average encoding
             avg_encoding = np.mean(encodings, axis=0)
-            print(f"Successfully created average encoding from {len(encodings)} samples")
             return avg_encoding.tolist()
-        else:
-            print("No face encodings were captured")
         
         return None
 
@@ -159,14 +153,16 @@ class FaceRecognition:
             return None, None, None, 0.0
         
         try:
-            # Validasi format gambar
-            validated_frame = self.validate_image_format(frame)
-            if validated_frame is None:
-                return None, None, None, 0.0
+            # Preprocess frame
+            frame = self.preprocess_frame(frame)
+            
+            # Convert BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_frame = np.ascontiguousarray(rgb_frame)
             
             # Find faces
-            face_locations = face_recognition.face_locations(validated_frame)
-            face_encodings = face_recognition.face_encodings(validated_frame, face_locations)
+            face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             
             if len(face_encodings) == 0:
                 return None, None, None, 0.0
@@ -183,10 +179,11 @@ class FaceRecognition:
                 face_data = self.known_face_data[best_match_index]
                 return face_data['id'], face_data['nim'], face_data['nama'], confidence
             
+            return None, None, None, 0.0
+            
         except Exception as e:
-            print(f"Error in face recognition: {e}")
-        
-        return None, None, None, 0.0
+            print(f"Error in recognize_face: {e}")
+            return None, None, None, 0.0
 
     def run_attendance(self, db, callback=None):
         """Menjalankan sistem presensi real-time"""
@@ -195,15 +192,15 @@ class FaceRecognition:
             print("Error: Cannot open camera")
             return
         
-        # Set resolusi kamera
+        # Set camera properties
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv2.CAP_PROP_FPS, 30)
         
         last_attendance = {}
         attendance_cooldown = 5  # seconds
         
         print("Starting attendance system... Press 'q' to quit")
-        print("Pastikan pencahayaan cukup dan wajah terlihat jelas")
         
         while True:
             ret, frame = cap.read()
@@ -212,6 +209,9 @@ class FaceRecognition:
                 break
             
             try:
+                # Preprocess frame
+                frame = self.preprocess_frame(frame)
+                
                 # Recognize face
                 mahasiswa_id, nim, nama, confidence = self.recognize_face(frame)
                 
@@ -269,25 +269,26 @@ class FaceRecognition:
                         if callback:
                             callback(nim, nama, tipe, confidence)
                         
-                        print(f"Presensi {tipe} dicatat untuk {nama} (Confidence: {confidence:.2f})")
-                
+                        print(f"Presensi {tipe} dicatat untuk {nama}")
+                    
                 else:
                     cv2.putText(frame, "Wajah tidak dikenali", (10, 30), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    cv2.putText(frame, "Pastikan wajah sudah terdaftar", (10, 60), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                    cv2.putText(frame, "Press 'q' to quit", (10, 90), 
+                    cv2.putText(frame, "Press 'q' to quit", (10, 60), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 
                 cv2.imshow('Presensi System', frame)
                 
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                    
             except Exception as e:
                 print(f"Error in attendance loop: {e}")
-                # Tetap tampilkan frame meski ada error
+                cv2.putText(frame, f"Error: {str(e)[:30]}", (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 cv2.imshow('Presensi System', frame)
-            
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
         
         cap.release()
         cv2.destroyAllWindows()
